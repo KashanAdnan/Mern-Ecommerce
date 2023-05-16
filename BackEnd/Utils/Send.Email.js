@@ -6,12 +6,12 @@ const SendEmail = async (options) => {
     port: 456,
     service: "gmail",
     auth: {
-      user: "khanzaidaboy@gmail.com",
-      pass: "ryyzkoskmmhxoqdq",
+      user: "kashanadnanyounus445555@gmail.com",
+      pass: "xuvpojpeetevpwhj",
     },
   });
   const mailOptions = {
-    from: "khanzaidaboy@gmail.com",
+    from: "kashanadnanyounus445555@gmail.com",
     to: options.email,
     subject: options.subject,
     text: options.message,

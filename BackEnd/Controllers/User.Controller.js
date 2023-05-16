@@ -4,16 +4,22 @@ const crypto = require("crypto");
 const catchAsyncError = require("../Middleware/catch.Async.error");
 const sendToken = require("../Utils/Send.Token");
 const SendEmail = require("../Utils/Send.Email.js");
+const cloudinary = require("cloudinary");
 // Creating User
 const registerUser = catchAsyncError(async (req, res, next) => {
+  const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+    folder: "avatars",
+    width: 550,
+    crop: "scale",
+  });
   const { name, email, password } = req.body;
   const User = await UserModel.create({
     name,
     email,
     password,
     avatar: {
-      public_id: "This is a sample public_id",
-      url: "ProfileUr",
+      public_id: myCloud.public_id,
+      url: myCloud.secure_url,
     },
   });
   sendToken(User, 201, res);
@@ -53,7 +59,7 @@ const forgetPassword = catchAsyncError(async (req, res, next) => {
   const resetToken = user.generateResetPasswordToken();
   await user.save({ validateBeforeSave: false });
 
-  const resetPasswordUrl = `http://localhost:4000/api/v1/password/reset/${resetToken}`;
+  const resetPasswordUrl = `http://192.168.0.110:3000/password/reset/${resetToken}`;
   const message = `Your Password Reset Token is :- \n\n ${resetPasswordUrl} \n\n if you have norequested this email then please ignore it`;
   try {
     await SendEmail({
@@ -120,6 +126,26 @@ const updateUser = catchAsyncError(async (req, res, next) => {
     name: req.body.name,
     email: req.body.email,
   };
+
+  if (req.body.avatar !== "") {
+    const user = await UserModel.findById(req.user.id);
+
+    const imageId = user.avatar.public_id;
+
+    await cloudinary.v2.uploader.destroy(imageId);
+
+    const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+      folder: "avatars",
+      width: 150,
+      crop: "scale",
+    });
+
+    newUserData.avatar = {
+      public_id: myCloud.public_id,
+      url: myCloud.secure_url,
+    };
+  }
+
   const user = await UserModel.findByIdAndUpdate(req.user.id, newUserData, {
     new: true,
     runValidators: true,
@@ -127,8 +153,7 @@ const updateUser = catchAsyncError(async (req, res, next) => {
   });
 
   res.status(200).json({
-    succes: true,
-    user,
+    success: true,
   });
 });
 const getAllUsers = catchAsyncError(async (req, res, next) => {
@@ -139,15 +164,15 @@ const getAllUsers = catchAsyncError(async (req, res, next) => {
   });
 });
 const getSingleUser = catchAsyncError(async (req, res, next) => {
-  const users = await UserModel.findById(req.params.id);
-  if (!users) {
+  const user = await UserModel.findById(req.params.id);
+  if (!user) {
     return next(
       new ErrorHandler(`User Doesn't Exits with ID : ${req.params.id}`)
     );
   }
   res.status(200).json({
     succes: true,
-    users,
+    user,
   });
 });
 const updateRole = catchAsyncError(async (req, res, next) => {
@@ -156,13 +181,11 @@ const updateRole = catchAsyncError(async (req, res, next) => {
     email: req.body.email,
     role: req.body.role,
   };
-  console.log(newUserData)
   const user = await UserModel.findByIdAndUpdate(req.params.id, newUserData, {
     new: true,
     runValidators: true,
     useFindAndModify: false,
   });
-  console.log(user)
 
   res.status(200).json({
     succes: true,
@@ -176,7 +199,7 @@ const DeleteUser = catchAsyncError(async (req, res, next) => {
       new ErrorHandler(`User Doesnot Exits with ID : ${req.params.id} `, 400)
     );
   }
-  await user.remove()
+  await user.remove();
   res.status(200).json({
     succes: true,
     user,

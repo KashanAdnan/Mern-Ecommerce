@@ -6,11 +6,14 @@ const {
 } = require("../Middleware/Authentication.js");
 const ProductRoute = express.Router();
 
-ProductRoute.get(
-  "/products",
-  ProductControler.getAllProducts
-);
+ProductRoute.get("/products", ProductControler.getAllProducts);
 
+ProductRoute.get(
+  "/admin/products",
+  isAuthenticateUser,
+  authorizeRole("admin"),
+  ProductControler.getAdminProducts
+);
 ProductRoute.post(
   "/admin/products/new",
   isAuthenticateUser,

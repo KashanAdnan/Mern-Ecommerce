@@ -26,7 +26,6 @@ const newOrder = catchAsyncError(async (req, res, next) => {
   });
   res.status(201).json({
     succes: true,
-    message: "Order Succesfull !",
     order,
   });
 });
@@ -65,6 +64,12 @@ const getAllOrders = catchAsyncError(async (req, res, next) => {
     orders,
   });
 });
+
+async function updateStock(quantity, id) {
+  const product = await ProductModel.findById(id);
+  product.Stock = product.Stock - quantity;
+  await product.save({ validateBeforeSave: false });
+}
 const UpdateOrders = catchAsyncError(async (req, res, next) => {
   const order = await Order.findById(req.params.id);
 
@@ -73,12 +78,14 @@ const UpdateOrders = catchAsyncError(async (req, res, next) => {
   }
   if (order.orderStatus === "Delivered") {
     return next(
-      new ErrorHandler("You Have Alreasdy Delivered this Product", 400)
+      new ErrorHandler("You Have Already Delivered this Product", 400)
     );
   }
-  order.OrderItems.forEach(async (order) => {
-    await updateStock(order.quantity, order.product);
-  });
+  if (req.body.status === "Shipped") {
+    order.OrderItems.forEach(async (order) => {
+      await updateStock(order.quantity, order.product);
+    });
+  }
 
   order.orderStatus = req.body.status;
   if (req.body.status === "Delivered") {
@@ -93,12 +100,6 @@ const UpdateOrders = catchAsyncError(async (req, res, next) => {
   });
 });
 
-async function updateStock(quantity, id) {
-  const product = await ProductModel.findById(id);
-  product.Stock = product.Stock - quantity;
-  await product.save({ validateBeforeSave: false });
-}
-
 const deleteOrder = catchAsyncError(async (req, res, next) => {
   const order = await Order.findById(req.params.id);
 
@@ -112,8 +113,6 @@ const deleteOrder = catchAsyncError(async (req, res, next) => {
     success: true,
   });
 });
-
-
 
 module.exports = {
   newOrder,

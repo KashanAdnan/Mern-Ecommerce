@@ -2,10 +2,37 @@ const { ProductModel } = require("../Models/Product.Model");
 const ErrorHandler = require("../Utils/Error.Handler");
 const catchAsyncError = require("../Middleware/catch.Async.error");
 const Apifeatures = require("../Utils/Api.Features");
+const cloudinary = require("cloudinary");
+
 // Creating Product
 const CreateProduct = catchAsyncError(async (req, res, next) => {
+  let images = [];
+
+  if (typeof req.body.image === "string") {
+    images.push(req.body.image);
+  } else {
+    images = req.body.image;
+  }
+
+  const imagesLinks = [];
+  for (let i = 0; i < images.length; i++) {
+    const result = await cloudinary.v2.uploader.upload(images[i], {
+      folder: "products",
+      width: 550,
+      crop: "scale",
+    });
+
+    imagesLinks.push({
+      public_id: result.public_id,
+      url: result.secure_url,
+    });
+  }
+
+  req.body.image = imagesLinks;
   req.body.user = req.user.id;
+
   const product = await ProductModel.create(req.body);
+
   res.status(201).json({
     success: true,
     product,
@@ -13,20 +40,25 @@ const CreateProduct = catchAsyncError(async (req, res, next) => {
 });
 //Getting all products
 const getAllProducts = async (req, res, next) => {
-  const resultPage = 8;
-  const ProductCount = await ProductModel.countDocuments();
+  const resultPerPage = 8;
+  const productCount = await ProductModel.countDocuments();
 
   const apiFeatures = new Apifeatures(ProductModel.find(), req.query)
     .search()
-    .filter()
-    .pagination(resultPage)
-  const Products = await apiFeatures.query;
+    .filter();
+  apiFeatures.pagination(resultPerPage);
+  let products = await apiFeatures.query;
+
+  let filteredProductsCount = products.length;
+
   res.status(200).send({
     sucess: true,
-    Products,
-    ProductCount,
+    products,
+    productCount,
+    resultPerPage,
+    filteredProductsCount,
   });
-}; 
+};
 // Updating the Products
 const UpdateProduct = catchAsyncError(async (req, res, next) => {
   let product = ProductModel.findById(req.params.id);
@@ -98,6 +130,14 @@ const createRating = catchAsyncError(async (req, res, next) => {
     success: true,
   });
 });
+const getAdminProducts = catchAsyncError(async (req, res, next) => {
+  const products = await ProductModel.find();
+
+  res.status(200).json({
+    success: true,
+    products,
+  });
+});
 
 // get All reviews
 const getAllReveiws = catchAsyncError(async (req, res, next) => {
@@ -142,8 +182,6 @@ const deleteReviews = catchAsyncError(async (req, res, next) => {
   });
 });
 
-
-
 module.exports = {
   CreateProduct,
   getAllProducts,
@@ -152,5 +190,6 @@ module.exports = {
   getProductDetails,
   createRating,
   getAllReveiws,
+  getAdminProducts,
   deleteReviews,
 };
