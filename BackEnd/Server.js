@@ -5,6 +5,7 @@ const UserRoute = require("./Routes/User.Route");
 const OrderRoute = require("./Routes/Order.Route");
 const PaymentRoute = require("./Routes/Payment.Route");
 const colors = require("colors");
+const path = require("path");
 const cors = require("cors");
 const cloudinary = require("cloudinary");
 const bodyParser = require("body-parser");
@@ -31,12 +32,16 @@ cloudinary.config({
 });
 
 app.use("/api/v1", ProductRoute);
-app.use("/api/v1", UserRoute);
+app.use("/api/v1", UserRoute);  
 app.use("/api/v1", OrderRoute);
 app.use("/api/v1", PaymentRoute);
 
 app.use(ErrorMiddleware);
 
+app.use(express.static(path.join(__dirname, "../frontend/build")))
+app.get("*" , (req,res) =>{
+  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
+})
 const server = app.listen(4000, () => {
   console.log(`Server is Listing on Port 4000`.yellow);
 });

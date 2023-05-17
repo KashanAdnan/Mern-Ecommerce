@@ -59,7 +59,9 @@ const forgetPassword = catchAsyncError(async (req, res, next) => {
   const resetToken = user.generateResetPasswordToken();
   await user.save({ validateBeforeSave: false });
 
-  const resetPasswordUrl = `http://192.168.0.110:3000/password/reset/${resetToken}`;
+  const resetPasswordUrl = `${req.protocol}://${req.get(
+    "host"
+  )}/password/reset/${resetToken}`;
   const message = `Your Password Reset Token is :- \n\n ${resetPasswordUrl} \n\n if you have norequested this email then please ignore it`;
   try {
     await SendEmail({
