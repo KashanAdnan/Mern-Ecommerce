@@ -61,15 +61,49 @@ const getAllProducts = async (req, res, next) => {
 };
 // Updating the Products
 const UpdateProduct = catchAsyncError(async (req, res, next) => {
-  let product = ProductModel.findById(req.params.id);
+  let product = await ProductModel.findById(req.params.id);
+
   if (!product) {
-    return next(new ErrorHandler("Product Not Found", 404));
+    return next(new ErrorHandler("Product not found", 404));
   }
+
+  // Images Start Here
+  let images = [];
+
+  if (typeof req.body.images === "string") {
+    images.push(req.body.images);
+  } else {
+    images = req.body.image;
+  }
+
+  if (images !== undefined) {
+    // Deleting Images From Cloudinary
+    for (let i = 0; i < product.image.length; i++) {
+      await cloudinary.v2.uploader.destroy(product.image[i].public_id);
+    }
+
+    const imagesLinks = [];
+
+    for (let i = 0; i < images.length; i++) {
+      const result = await cloudinary.v2.uploader.upload(images[i], {
+        folder: "products",
+      });
+
+      imagesLinks.push({
+        public_id: result.public_id,
+        url: result.secure_url,
+      });
+    }
+
+    req.body.image = imagesLinks;
+  }
+
   product = await ProductModel.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
-    userFindAndModify: false,
+    useFindAndModify: false,
   });
+
   res.status(200).json({
     success: true,
     product,
